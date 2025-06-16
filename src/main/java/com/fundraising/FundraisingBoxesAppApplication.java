@@ -1,4 +1,4 @@
-package com.fundraising.fundraising_boxes_app;
+package com.fundraising;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
