@@ -7,8 +7,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
 
-@Service
-public class CurrencyConversionService {
+@Service("staticCurrencyConverter")
+public class CurrencyConversionService implements CurrencyConverter {
 
     // Direct exchange rates between all currency pairs
     private static final Map<String, BigDecimal> EXCHANGE_RATES = Map.of(

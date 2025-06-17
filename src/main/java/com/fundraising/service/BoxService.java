@@ -13,8 +13,8 @@ import com.fundraising.mapper.BoxMapper;
 import com.fundraising.repository.BoxCurrencyRepository;
 import com.fundraising.repository.BoxRepository;
 import com.fundraising.repository.FundraisingEventRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,16 +27,16 @@ public class BoxService {
     private final BoxCurrencyRepository boxCurrencyRepository;
     private final FundraisingEventRepository fundraisingEventRepository;
     private final BoxMapper boxMapper;
-    private final CurrencyConversionService currencyConversionService;
+    private final CurrencyConverter currencyConverter;
 
     public BoxService(BoxRepository boxRepository, BoxCurrencyRepository boxCurrencyRepository,
                       FundraisingEventRepository fundraisingEventRepository, BoxMapper boxMapper,
-                      CurrencyConversionService currencyConversionService) {
+                      @Qualifier("staticCurrencyConverter") CurrencyConverter currencyConverter) {
         this.boxRepository = boxRepository;
         this.boxCurrencyRepository = boxCurrencyRepository;
         this.fundraisingEventRepository = fundraisingEventRepository;
         this.boxMapper = boxMapper;
-        this.currencyConversionService = currencyConversionService;
+        this.currencyConverter = currencyConverter;
     }
 
     public BoxDto registerBox(CreateBoxRequest request) {
@@ -126,7 +126,6 @@ public class BoxService {
 
         return boxMapper.toDto(box);
     }
-    @Transactional
     public BoxDto emptyBox(Long boxId) {
         Box box = boxRepository.findById(boxId)
                 .orElseThrow(() -> new BoxNotFoundException("Box with ID " + boxId + " not found"));
@@ -155,7 +154,7 @@ public class BoxService {
         for (BoxCurrency boxCurrency : boxCurrencies) {
             BigDecimal amount = boxCurrency.getAmount();
             if (amount.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal convertedAmount = currencyConversionService.convert(
+                BigDecimal convertedAmount = currencyConverter.convert(
                         amount,
                         boxCurrency.getCurrency(),
                         event.getCurrency()
