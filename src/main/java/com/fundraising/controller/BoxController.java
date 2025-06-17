@@ -41,6 +41,18 @@ public class BoxController {
         return ResponseEntity.ok(boxes);
     }
 
+    @PutMapping("/{boxId}/assign/{eventId}")
+    public ResponseEntity<BoxDto> assignBoxToEvent(@PathVariable Long boxId, @PathVariable Long eventId) {
+        BoxDto box = boxService.assignBoxToEvent(boxId, eventId);
+        return ResponseEntity.ok(box);
+    }
+
+    @PutMapping("/{boxId}/unassign")
+    public ResponseEntity<BoxDto> unassignBoxFromEvent(@PathVariable Long boxId) {
+        BoxDto box = boxService.unassignBoxFromEvent(boxId);
+        return ResponseEntity.ok(box);
+    }
+
     @ExceptionHandler(DuplicateBoxIdentifierException.class)
     public ResponseEntity<Map<String, String>> handleDuplicateBoxIdentifier(DuplicateBoxIdentifierException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -50,6 +62,18 @@ public class BoxController {
     @ExceptionHandler(BoxNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleBoxNotFound(BoxNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", ex.getMessage()));
     }
 }
