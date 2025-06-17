@@ -1,8 +1,10 @@
 package com.fundraising.service;
 
+import com.fundraising.dto.AddMoneyRequest;
 import com.fundraising.dto.BoxDto;
 import com.fundraising.dto.CreateBoxRequest;
 import com.fundraising.entity.Box;
+import com.fundraising.entity.BoxCurrency;
 import com.fundraising.entity.FundraisingEvent;
 import com.fundraising.enums.BoxStatus;
 import com.fundraising.exception.BoxNotFoundException;
@@ -12,8 +14,11 @@ import com.fundraising.repository.BoxCurrencyRepository;
 import com.fundraising.repository.BoxRepository;
 import com.fundraising.repository.FundraisingEventRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class BoxService {
@@ -94,5 +99,28 @@ public class BoxService {
     public List<BoxDto> getAllBoxes() {
         List<Box> boxes = boxRepository.findAll();
         return boxMapper.toDtoList(boxes);
+    }
+    public BoxDto addMoneyToBox(Long boxId, AddMoneyRequest request) {
+        Box box = boxRepository.findById(boxId)
+                .orElseThrow(() -> new BoxNotFoundException("Box with ID " + boxId + " not found"));
+
+        if (box.getStatus() != BoxStatus.ASSIGNED) {
+            throw new IllegalStateException("Box must be assigned to a fundraising event before adding money");
+        }
+
+        Optional<BoxCurrency> existingCurrency = boxCurrencyRepository.findByBoxAndCurrency(box, request.getCurrency());
+
+        BoxCurrency boxCurrency;
+        if (existingCurrency.isPresent()) {
+            boxCurrency = existingCurrency.get();
+            BigDecimal newAmount = boxCurrency.getAmount().add(request.getAmount());
+            boxCurrency.setAmount(newAmount);
+        } else {
+            boxCurrency = new BoxCurrency(box, request.getCurrency(), request.getAmount());
+        }
+
+        boxCurrencyRepository.save(boxCurrency);
+
+        return boxMapper.toDto(box);
     }
 }

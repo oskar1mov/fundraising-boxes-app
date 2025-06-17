@@ -1,5 +1,6 @@
 package com.fundraising.controller;
 
+import com.fundraising.dto.AddMoneyRequest;
 import com.fundraising.dto.BoxDto;
 import com.fundraising.dto.CreateBoxRequest;
 import com.fundraising.exception.BoxNotFoundException;
@@ -50,6 +51,12 @@ public class BoxController {
     @PutMapping("/{boxId}/unassign")
     public ResponseEntity<BoxDto> unassignBoxFromEvent(@PathVariable Long boxId) {
         BoxDto box = boxService.unassignBoxFromEvent(boxId);
+        return ResponseEntity.ok(box);
+    }
+
+    @PostMapping("/{boxId}/money")
+    public ResponseEntity<BoxDto> addMoneyToBox(@PathVariable Long boxId, @Valid @RequestBody AddMoneyRequest request) {
+        BoxDto box = boxService.addMoneyToBox(boxId, request);
         return ResponseEntity.ok(box);
     }
 
