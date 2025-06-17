@@ -27,13 +27,16 @@ public class BoxService {
     private final BoxCurrencyRepository boxCurrencyRepository;
     private final FundraisingEventRepository fundraisingEventRepository;
     private final BoxMapper boxMapper;
+    private final CurrencyConversionService currencyConversionService;
 
     public BoxService(BoxRepository boxRepository, BoxCurrencyRepository boxCurrencyRepository,
-                      FundraisingEventRepository fundraisingEventRepository, BoxMapper boxMapper) {
+                      FundraisingEventRepository fundraisingEventRepository, BoxMapper boxMapper,
+                      CurrencyConversionService currencyConversionService) {
         this.boxRepository = boxRepository;
         this.boxCurrencyRepository = boxCurrencyRepository;
         this.fundraisingEventRepository = fundraisingEventRepository;
         this.boxMapper = boxMapper;
+        this.currencyConversionService = currencyConversionService;
     }
 
     public BoxDto registerBox(CreateBoxRequest request) {
@@ -120,6 +123,52 @@ public class BoxService {
         }
 
         boxCurrencyRepository.save(boxCurrency);
+
+        return boxMapper.toDto(box);
+    }
+    @Transactional
+    public BoxDto emptyBox(Long boxId) {
+        Box box = boxRepository.findById(boxId)
+                .orElseThrow(() -> new BoxNotFoundException("Box with ID " + boxId + " not found"));
+
+        if (box.getStatus() != BoxStatus.ASSIGNED) {
+            throw new IllegalStateException("Box must be assigned to a fundraising event before emptying");
+        }
+
+        FundraisingEvent event = box.getAssignedEvent();
+        if (event == null) {
+            throw new IllegalStateException("Box is not assigned to any fundraising event");
+        }
+
+        List<BoxCurrency> boxCurrencies = boxCurrencyRepository.findByBox(box);
+
+        // Check if box is effectively empty (no currencies with positive amounts)
+        boolean hasPositiveAmount = boxCurrencies.stream()
+                .anyMatch(bc -> bc.getAmount().compareTo(BigDecimal.ZERO) > 0);
+
+        if (!hasPositiveAmount) {
+            throw new IllegalStateException("Box is already empty");
+        }
+
+        BigDecimal totalTransferred = BigDecimal.ZERO;
+
+        for (BoxCurrency boxCurrency : boxCurrencies) {
+            BigDecimal amount = boxCurrency.getAmount();
+            if (amount.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal convertedAmount = currencyConversionService.convert(
+                        amount,
+                        boxCurrency.getCurrency(),
+                        event.getCurrency()
+                );
+                totalTransferred = totalTransferred.add(convertedAmount);
+            }
+        }
+
+        BigDecimal newBalance = event.getBalance().add(totalTransferred);
+        event.setBalance(newBalance);
+        fundraisingEventRepository.save(event);
+
+        boxCurrencyRepository.deleteAll(boxCurrencies);
 
         return boxMapper.toDto(box);
     }

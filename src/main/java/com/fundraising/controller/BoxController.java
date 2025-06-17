@@ -60,6 +60,12 @@ public class BoxController {
         return ResponseEntity.ok(box);
     }
 
+    @PostMapping("/{boxId}/empty")
+    public ResponseEntity<BoxDto> emptyBox(@PathVariable Long boxId) {
+        BoxDto box = boxService.emptyBox(boxId);
+        return ResponseEntity.ok(box);
+    }
+
     @ExceptionHandler(DuplicateBoxIdentifierException.class)
     public ResponseEntity<Map<String, String>> handleDuplicateBoxIdentifier(DuplicateBoxIdentifierException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
