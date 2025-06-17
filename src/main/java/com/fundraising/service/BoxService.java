@@ -12,12 +12,10 @@ import com.fundraising.repository.BoxCurrencyRepository;
 import com.fundraising.repository.BoxRepository;
 import com.fundraising.repository.FundraisingEventRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-@Transactional
 public class BoxService {
 
     private final BoxRepository boxRepository;
@@ -34,7 +32,6 @@ public class BoxService {
     }
 
     public BoxDto registerBox(CreateBoxRequest request) {
-        // Check for duplicate box identifier
         if (boxRepository.existsByBoxIdentifier(request.getBoxIdentifier())) {
             throw new DuplicateBoxIdentifierException("Box with identifier '" + request.getBoxIdentifier() + "' already exists");
         }
@@ -53,7 +50,6 @@ public class BoxService {
         List<com.fundraising.entity.BoxCurrency> currencies = boxCurrencyRepository.findByBox(box);
         boxCurrencyRepository.deleteAll(currencies);
 
-        // Delete the box itself
         boxRepository.delete(box);
     }
 
@@ -62,12 +58,12 @@ public class BoxService {
                 .orElseThrow(() -> new BoxNotFoundException("Box with ID " + boxId + " not found"));
 
         FundraisingEvent event = fundraisingEventRepository.findById(eventId)
-                .orElseThrow(() -> new RuntimeException("Fundraising event with ID " + eventId + " not found"));
-        // Can only assign if box is AVAILABLE
+                .orElseThrow(() -> new IllegalArgumentException("Fundraising event with ID " + eventId + " not found"));
+
         if (box.getStatus() != BoxStatus.AVAILABLE) {
             throw new IllegalStateException("Box is already assigned to another event");
         }
-        // Can only assign if box is empty
+
         boolean isEmpty = boxCurrencyRepository.isBoxEmpty(box);
         if (!isEmpty) {
             throw new IllegalStateException("Box must be empty before assignment");
@@ -95,7 +91,6 @@ public class BoxService {
         return boxMapper.toDto(savedBox);
     }
 
-    @Transactional(readOnly = true)
     public List<BoxDto> getAllBoxes() {
         List<Box> boxes = boxRepository.findAll();
         return boxMapper.toDtoList(boxes);
